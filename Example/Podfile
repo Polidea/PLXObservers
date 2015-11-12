@@ -1,0 +1,9 @@
+source 'https://github.com/CocoaPods/Specs.git'
+# use_frameworks!
+
+
+target 'PLXObservers_Tests', :exclusive => true do
+  pod "PLXObservers", :path => "../"
+
+  pod 'Kiwi'
+end
