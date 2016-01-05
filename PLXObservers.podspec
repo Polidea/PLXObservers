@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = "PLXObservers"
-  s.version          = "1.0.0"
+  s.version          = "1.0.1"
   s.summary          = "Multi-observers for Objective-C"
   s.description      = <<-DESC
                        Small tool for fast implementation of multi-observer pattern in Objective-C

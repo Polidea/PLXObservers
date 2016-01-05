@@ -16,12 +16,12 @@
 @end
 
 @implementation PLXWeakRef {
-    __weak id<NSObject> _weakReference;
 }
 
 - (instancetype)initWithObject:(id)object {
     self = [super init];
-    if (self) { _weakReference = object; } return self;
+    if (self) {_weakReference = object;}
+    return self;
 }
 
 + (instancetype)weakRefWithObject:(id)object {
@@ -29,7 +29,7 @@
 }
 
 - (BOOL)isEqual:(PLXWeakRef *)object {
-    if (![object isKindOfClass:[PLXWeakRef class]]) { return NO; }
+    if (![object isKindOfClass:[PLXWeakRef class]]) {return NO;}
     return object.weakReference == _weakReference;
 }
 @end
@@ -37,8 +37,8 @@
 #pragma mark - PLXObservers
 
 @implementation PLXObservers {
-    NSMutableArray * _observers;
-    Protocol * _observerProtocol;
+    NSMutableArray *_observers;
+    Protocol *_observerProtocol;
 }
 
 
@@ -56,17 +56,21 @@
 }
 
 - (void)addObserver:(id <NSObject>)observer {
-    [_observers addObject:[PLXWeakRef weakRefWithObject:observer]];
+    @synchronized (self) {
+        [_observers addObject:[PLXWeakRef weakRefWithObject:observer]];
+    }
 }
 
 - (void)removeObserver:(id <NSObject>)observer {
-    for(NSUInteger i = 0; i < _observers.count;){
-        PLXWeakRef * ref = _observers[i];
-        if(ref.weakReference == observer){
-            [_observers removeObjectAtIndex:i];
-            return;
-        } else {
-            ++i;
+    @synchronized (self) {
+        for (NSUInteger i = 0; i < _observers.count;) {
+            PLXWeakRef *ref = _observers[i];
+            if (ref.weakReference == observer) {
+                [_observers removeObjectAtIndex:i];
+                return;
+            } else {
+                ++i;
+            }
         }
     }
 }
@@ -83,7 +87,7 @@
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector {
     struct objc_method_description desc = [self methodDescriptionForSelector:aSelector fromProtocol:_observerProtocol];
 
-    if(desc.name != NULL){
+    if (desc.name != NULL) {
         return [NSMethodSignature signatureWithObjCTypes:desc.types];
     } else {
         return [super methodSignatureForSelector:aSelector];
@@ -93,10 +97,14 @@
 - (void)forwardInvocation:(NSInvocation *)anInvocation {
     SEL aSelector = [anInvocation selector];
 
-    NSArray *observersCopy = [_observers copy];
-    for(PLXWeakRef * observerValue in observersCopy) {
-        id<NSObject> observer = [observerValue weakReference];
-        if([observer respondsToSelector:aSelector]){
+    NSArray *observersCopy = nil;
+    @synchronized (self) {
+        observersCopy = [_observers copy];
+    }
+
+    for (PLXWeakRef *observerValue in observersCopy) {
+        id <NSObject> observer = [observerValue weakReference];
+        if ([observer respondsToSelector:aSelector]) {
             [anInvocation invokeWithTarget:observer];
         }
     }
@@ -108,7 +116,7 @@
     //try to retrieve required method first, or the optional one if not found.
     desc = protocol_getMethodDescription(protocol, aSelector, YES, YES);
 
-    if(desc.name == NULL){
+    if (desc.name == NULL) {
         desc = protocol_getMethodDescription(protocol, aSelector, NO, YES);
     }
     return desc;
